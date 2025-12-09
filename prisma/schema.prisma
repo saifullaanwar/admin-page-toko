@@ -1,0 +1,63 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// 1. Tabel Produk
+model Produk {
+  id      Int @id @default(autoincrement())
+  nama    String @db.VarChar(255)
+  harga   Int @db.Int // Menggunakan Int atau Decimal sesuai kebutuhan
+  
+  stok             Stok? // Relasi 1-ke-1 opsional
+  DetailPembelian DetailPembelian[] // Relasi 1-ke-banyak
+}
+
+// 2. Tabel Stok (Relasi 1-ke-1 dengan Produk)
+model Stok {
+  id        Int @id @default(autoincrement())
+  id_produk Int @unique
+  jumlah    Int @default(0)
+
+  produk Produk @relation(fields: [id_produk], references: [id])
+}
+
+// 3. Tabel Pembelian (Header Transaksi)
+model Pembelian {
+  id         Int @id @default(autoincrement())
+  tgl_beli   DateTime @default(now())
+  total      Int @db.Int
+  status     Status @default(Baru)
+
+  DetailPembelian DetailPembelian[] // Relasi 1-ke-banyak
+}
+
+// Enum untuk status pembelian
+enum Status {
+  Baru
+  Selesai
+  Dibatalkan
+}
+
+// 4. Tabel DetailPembelian (Item Transaksi)
+model DetailPembelian {
+  id_pembelian   Int
+  id_produk      Int
+  jumlah         Int
+  harga_satuan   Int @db.Int
+
+  pembelian Pembelian @relation(fields: [id_pembelian], references: [id])
+  produk    Produk    @relation(fields: [id_produk], references: [id])
+
+  @@id([id_pembelian, id_produk], name: "ID_Detail") // Opsional: Composite PK
+}

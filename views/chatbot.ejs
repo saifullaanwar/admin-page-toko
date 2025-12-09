@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot Gemini Sederhana</title>
+    <style>
+        /* PERBAIKAN: Hapus margin/padding dari body agar header menyentuh batas kotak iframe */
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background-color: #f0f2f5; 
+            margin: 0; /* PASTIKAN INI NOL */
+            padding: 0; /* PASTIKAN INI NOL */
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+        }
+        
+        /* CHAT CONTAINER: Pastikan memenuhi lebar yang tersedia */
+        .chat-container { 
+            width: 100%; /* Gunakan 100% agar memenuhi lebar iframe/widget */
+            max-width: 600px; 
+            background: white; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1); 
+            display: flex; 
+            flex-direction: column; 
+            height: 100vh; /* Gunakan 100vh agar memenuhi tinggi iframe/widget */
+            overflow: hidden; 
+        }
+        
+        /* CHAT HEADER: Sudut yang benar */
+        .chat-header { 
+            background-color: #007bff; 
+            color: white; 
+            padding: 15px; 
+            text-align: center; 
+            font-size: 1.2em; 
+            font-weight: bold; 
+            border-radius: 12px 12px 0 0; /* Sudut atas */
+        }
+        
+        /* KODE LAINNYA */
+        .chat-box { flex-grow: 1; padding: 20px; overflow-y: auto; background-color: #e9ebee; }
+        .message { margin-bottom: 15px; display: flex; }
+        .message.user { justify-content: flex-end; }
+        .message.model { justify-content: flex-start; }
+        .message-bubble { max-width: 80%; padding: 10px 15px; border-radius: 18px; line-height: 1.4; word-wrap: break-word; }
+        .message.user .message-bubble { background-color: #007bff; color: white; border-bottom-right-radius: 4px; }
+        .message.model .message-bubble { background-color: #ffffff; color: #333; border: 1px solid #ddd; border-bottom-left-radius: 4px; }
+        .chat-input-area { padding: 15px; border-top: 1px solid #ccc; background-color: white; display: flex; }
+        .chat-input-area #chatInput { flex-grow: 1; padding: 10px; border: 1px solid #ccc; border-radius: 20px; margin-right: 10px; font-size: 1em; }
+        .chat-input-area #sendButton { background-color: #28a745; color: white; border: none; border-radius: 20px; padding: 10px 20px; cursor: pointer; font-weight: bold; transition: background-color 0.3s; }
+        .chat-input-area #sendButton:hover { background-color: #218838; }
+        .alert { padding: 10px; margin-bottom: 10px; border-radius: 6px; font-weight: bold; text-align: center; }
+        .alert-error { background-color: #f8d7da; color: #721c24; }
+        
+        /* Loading animation */
+        .loading-dots {
+            font-weight: bold;
+            animation: blink 1.5s infinite;
+        }
+        @keyframes blink {
+            0% { opacity: 0.2; }
+            50% { opacity: 1; }
+            100% { opacity: 0.2; }
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">🤖 Chatbot Gemini</div>
+        
+        <div class="chat-box" id="chatBox">
+            <% if (message && message.type === 'error') { %>
+                <div class="alert alert-error"><%= message.text %></div>
+            <% } %>
+
+            <% history.forEach(msg => { %>
+                <div class="message <%= msg.sender %>">
+                    <div class="message-bubble">
+                        <%= msg.text %>
+                    </div>
+                </div>
+            <% }); %>
+        </div>
+
+        <div class="chat-input-area">
+            <input type="text" id="chatInput" placeholder="Ketik pesan Anda..." required autocomplete="off">
+            <button id="sendButton">Kirim</button>
+        </div>
+    </div>
+    
+    <script>
+        const chatInput = document.getElementById('chatInput');
+        const sendButton = document.getElementById('sendButton');
+        const chatBox = document.getElementById('chatBox');
+
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        function appendMessage(text, sender, isLoading = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message', sender);
+            
+            const bubble = document.createElement('div');
+            bubble.classList.add('message-bubble');
+            
+            if (isLoading) {
+                 bubble.innerHTML = '<span class="loading-dots">...</span>';
+            } else {
+                 bubble.textContent = text;
+            }
+            
+            messageDiv.appendChild(bubble);
+            chatBox.appendChild(messageDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+            
+            return messageDiv;
+        }
+
+        async function sendMessage() {
+            const message = chatInput.value.trim();
+            if (message === "") return;
+
+            appendMessage(message, 'user');
+            chatInput.value = '';
+            
+            const loadingBubbleContainer = appendMessage("", 'model', true);
+
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        message: message
+                    })
+                });
+
+                const data = await response.json();
+                
+                chatBox.removeChild(loadingBubbleContainer);
+
+                if (data.success) {
+                    appendMessage(data.aiResponse, 'model');
+                } else {
+                    appendMessage(data.message || "Terjadi kesalahan saat menghubungi AI.", 'model');
+                }
+
+            } catch (error) {
+                console.error("Fetch/Koneksi Error:", error);
+                if (loadingBubbleContainer && chatBox.contains(loadingBubbleContainer)) {
+                    chatBox.removeChild(loadingBubbleContainer);
+                }
+                appendMessage("Koneksi terputus atau API gagal dihubungi.", 'model');
+            }
+        }
+
+        sendButton.addEventListener('click', sendMessage);
+
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault(); 
+                sendMessage();
+            }
+        });
+
+    </script>
+</body>
+</html>
