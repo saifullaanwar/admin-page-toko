@@ -1,5 +1,68 @@
-node_modules
-# Keep environment variables out of version control
-.env
+# Dependencies
+/node_modules
+/jspm_packages/
+# Snowpack dependency directory
+web_modules/
 
-/generated/prisma
+# Logs and Debug
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage and Build Output
+lib-cov
+coverage
+*.lcov
+.nyc_output
+.grunt
+build/Release
+.tsbuildinfo
+.npm
+.eslintcache
+.stylelintcache
+.node_repl_history
+*.tgz
+
+# Environment Variables and Sensitive Files
+# Pastikan file .env Anda tidak diunggah
+.env
+.env.*
+!.env.example
+
+# Prisma specific output
+# Ini dari konflik lokal Anda
+/generated/prisma 
+
+# IDE / Editor Files (Optional, but useful)
+.vscode-test
+
+# Add your specific framework build outputs if needed (e.g., .next, dist)
+.cache
+.parcel-cache
+.next
+out
+.nuxt
+dist
+.svelte-kit/
+**/.vitepress/dist
+**/.vitepress/cache
+.docusaurus
+
+# yarn v3
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
