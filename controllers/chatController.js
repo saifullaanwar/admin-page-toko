@@ -1,53 +1,72 @@
-// controllers/chatController.js
-
 const { GoogleGenAI } = require('@google/genai');
+const prisma = require('../models/prisma');
 
-// Inisialisasi Gemini AI. Kunci akan otomatis dibaca dari GEMINI_API_KEY di .env
-const ai = new GoogleGenAI({}); 
-// Riwayat chat di luar fungsi controller agar tetap tersimpan selama server berjalan
-const chatHistory = []; 
+// Inisialisasi Gemini dengan API Key dari .env
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY }); 
 
-// 1. GET: Menampilkan halaman chat (hanya untuk memuat riwayat awal)
+// Riwayat chat disimpan dalam array (Memory Storage)
+let chatHistory = []; 
+
+// Tampilkan halaman chatbot
 exports.getChatPage = (req, res) => {
-    // Karena kita tidak lagi menggunakan pesan session untuk error saat AJAX,
-    // kita hanya mengirim history.
     res.render('chatbot', { 
         history: chatHistory, 
-        message: null // Tidak perlu pesan flash message dari session
+        message: null 
     });
 };
 
-// 2. POST: Mengirim pesan ke AI (HARUS MENGEMBALIKAN JSON)
+// Fungsi menghapus riwayat chat
+exports.clearChat = (req, res) => {
+    chatHistory = []; 
+    return res.status(200).json({ success: true, message: 'Riwayat berhasil dihapus.' });
+};
+
+// Fungsi mengirim pesan ke AI
 exports.sendMessage = async (req, res) => {
     const userMessage = req.body.message;
 
     if (!userMessage) {
-        // Jika pesan kosong, kirim status 400 Bad Request
         return res.status(400).json({ success: false, message: 'Pesan tidak boleh kosong.' });
     }
 
-    // Tambahkan pesan pengguna ke riwayat (di sisi server)
-    chatHistory.push({ sender: 'user', text: userMessage });
-
     try {
-        // Setup sesi chat dengan riwayat yang ada
+        // 1. Ambil data stok & transaksi untuk konteks AI
+        const produkList = await prisma.produk.findMany({ include: { stok: true } });
+        const transaksiList = await prisma.pembelian.findMany({
+            take: 5,
+            orderBy: { tgl_beli: 'desc' }
+        });
+
+        const teksStok = produkList.map(p => `- ${p.nama}: Stok ${p.stok ? p.stok.jumlah : 0}`).join("\n");
+        const teksTransaksi = transaksiList.map(t => `- ID: ${t.id}, Total: ${t.total}, Status: ${t.status}`).join("\n");
+
+        // 2. Bungkus dalam prompt instruksi
+        const promptLengkap = `
+Kamu adalah asisten toko. Berikut adalah data asli dari database kami:
+STOK BARANG:
+${teksStok}
+
+5 TRANSAKSI TERAKHIR:
+${teksTransaksi}
+
+Pertanyaan user: ${userMessage}`;
+
+        // 3. Setup sesi chat Gemini
         const chat = ai.chats.create({
             model: "gemini-2.5-flash", 
             history: chatHistory.map(item => ({
                 role: item.sender === 'user' ? 'user' : 'model',
-                // Pastikan format parts sesuai: [ {text: "teks"} ]
                 parts: [{ text: item.text }] 
             }))
         });
 
-        // Kirim pesan terbaru
-        const response = await chat.sendMessage({ message: userMessage });
+        const response = await chat.sendMessage({ message: promptLengkap });
         const aiResponse = response.text;
 
-        // Tambahkan respons AI ke riwayat (di sisi server)
+        // 4. Simpan ke history (Pesan asli user agar tampilan rapi)
+        chatHistory.push({ sender: 'user', text: userMessage });
         chatHistory.push({ sender: 'model', text: aiResponse });
         
-        // Kirim respons JSON ke client
         return res.status(200).json({ 
             success: true, 
             aiResponse: aiResponse 
@@ -55,10 +74,9 @@ exports.sendMessage = async (req, res) => {
 
     } catch (error) {
         console.error("Gemini API Error:", error.message);
-        // Kirim respons error JSON
         return res.status(500).json({ 
             success: false, 
-            message: 'Gagal menghubungi AI. Pastikan API Key valid dan terisi.' 
+            message: 'Gagal menghubungi AI: ' + error.message
         });
     }
 };

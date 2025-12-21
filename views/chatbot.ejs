@@ -3,91 +3,119 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chatbot Gemini Sederhana</title>
+    <title>Chatbot Gemini</title>
     <style>
-        /* PERBAIKAN: Hapus margin/padding dari body agar header menyentuh batas kotak iframe */
-        body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            background-color: #f0f2f5; 
-            margin: 0; /* PASTIKAN INI NOL */
-            padding: 0; /* PASTIKAN INI NOL */
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            min-height: 100vh; 
+        body, html { 
+            margin: 0 !important; 
+            padding: 0 !important; 
+            height: 100%; 
+            width: 100%; 
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        
-        /* CHAT CONTAINER: Pastikan memenuhi lebar yang tersedia */
+
         .chat-container { 
-            width: 100%; /* Gunakan 100% agar memenuhi lebar iframe/widget */
-            max-width: 600px; 
-            background: white; 
-            border-radius: 12px; 
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1); 
             display: flex; 
             flex-direction: column; 
-            height: 100vh; /* Gunakan 100vh agar memenuhi tinggi iframe/widget */
-            overflow: hidden; 
+            height: 100vh; 
+            width: 100vw; 
+            background: white; 
         }
-        
-        /* CHAT HEADER: Sudut yang benar */
+
         .chat-header { 
             background-color: #007bff; 
             color: white; 
-            padding: 15px; 
-            text-align: center; 
-            font-size: 1.2em; 
-            font-weight: bold; 
-            border-radius: 12px 12px 0 0; /* Sudut atas */
+            padding: 12px 15px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            font-weight: bold;
+            box-sizing: border-box;
         }
-        
-        /* KODE LAINNYA */
-        .chat-box { flex-grow: 1; padding: 20px; overflow-y: auto; background-color: #e9ebee; }
-        .message { margin-bottom: 15px; display: flex; }
+
+        .btn-clear { 
+            background: #dc3545; 
+            color: white; 
+            border: none; 
+            padding: 4px 8px; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            font-size: 0.75em; 
+        }
+
+        .chat-box { 
+            flex-grow: 1; 
+            padding: 15px; 
+            overflow-y: auto; 
+            background-color: #e9ebee; 
+            display: flex;
+            flex-direction: column;
+        }
+
+        .message { margin-bottom: 12px; display: flex; }
         .message.user { justify-content: flex-end; }
         .message.model { justify-content: flex-start; }
-        .message-bubble { max-width: 80%; padding: 10px 15px; border-radius: 18px; line-height: 1.4; word-wrap: break-word; }
-        .message.user .message-bubble { background-color: #007bff; color: white; border-bottom-right-radius: 4px; }
-        .message.model .message-bubble { background-color: #ffffff; color: #333; border: 1px solid #ddd; border-bottom-left-radius: 4px; }
-        .chat-input-area { padding: 15px; border-top: 1px solid #ccc; background-color: white; display: flex; }
-        .chat-input-area #chatInput { flex-grow: 1; padding: 10px; border: 1px solid #ccc; border-radius: 20px; margin-right: 10px; font-size: 1em; }
-        .chat-input-area #sendButton { background-color: #28a745; color: white; border: none; border-radius: 20px; padding: 10px 20px; cursor: pointer; font-weight: bold; transition: background-color 0.3s; }
-        .chat-input-area #sendButton:hover { background-color: #218838; }
-        .alert { padding: 10px; margin-bottom: 10px; border-radius: 6px; font-weight: bold; text-align: center; }
-        .alert-error { background-color: #f8d7da; color: #721c24; }
         
-        /* Loading animation */
-        .loading-dots {
+        .message-bubble { 
+            max-width: 85%; 
+            padding: 8px 12px; 
+            border-radius: 15px; 
+            font-size: 0.9em;
+            line-height: 1.4; 
+            word-wrap: break-word; 
+        }
+
+        .message.user .message-bubble { background-color: #007bff; color: white; border-bottom-right-radius: 2px; }
+        .message.model .message-bubble { background-color: #ffffff; color: #333; border: 1px solid #ddd; border-bottom-left-radius: 2px; }
+
+        .chat-input-area { 
+            padding: 10px; 
+            border-top: 1px solid #ccc; 
+            background: white; 
+            display: flex; 
+            align-items: center;
+        }
+
+        #chatInput { 
+            flex-grow: 1; 
+            padding: 8px 12px; 
+            border: 1px solid #ccc; 
+            border-radius: 20px; 
+            margin-right: 8px; 
+            outline: none;
+        }
+
+        #sendButton { 
+            background-color: #28a745; 
+            color: white; 
+            border: none; 
+            border-radius: 20px; 
+            padding: 8px 15px; 
+            cursor: pointer; 
             font-weight: bold;
-            animation: blink 1.5s infinite;
         }
-        @keyframes blink {
-            0% { opacity: 0.2; }
-            50% { opacity: 1; }
-            100% { opacity: 0.2; }
-        }
+
+        .loading-dots { animation: blink 1.5s infinite; font-weight: bold; }
+        @keyframes blink { 0%, 100% { opacity: 0.2; } 50% { opacity: 1; } }
     </style>
 </head>
 <body>
     <div class="chat-container">
-        <div class="chat-header">🤖 Chatbot Gemini</div>
+        <div class="chat-header">
+            <span>🤖 Asisten Toko Saiful</span>
+            <button class="btn-clear" id="clearBtn">Hapus Chat</button>
+        </div>
         
         <div class="chat-box" id="chatBox">
-            <% if (message && message.type === 'error') { %>
-                <div class="alert alert-error"><%= message.text %></div>
-            <% } %>
-
             <% history.forEach(msg => { %>
                 <div class="message <%= msg.sender %>">
-                    <div class="message-bubble">
-                        <%= msg.text %>
-                    </div>
+                    <div class="message-bubble"><%= msg.text %></div>
                 </div>
             <% }); %>
         </div>
 
         <div class="chat-input-area">
-            <input type="text" id="chatInput" placeholder="Ketik pesan Anda..." required autocomplete="off">
+            <input type="text" id="chatInput" placeholder="Tanya stok..." autocomplete="off">
             <button id="sendButton">Kirim</button>
         </div>
     </div>
@@ -96,77 +124,55 @@
         const chatInput = document.getElementById('chatInput');
         const sendButton = document.getElementById('sendButton');
         const chatBox = document.getElementById('chatBox');
+        const clearBtn = document.getElementById('clearBtn');
 
         chatBox.scrollTop = chatBox.scrollHeight;
 
         function appendMessage(text, sender, isLoading = false) {
-            const messageDiv = document.createElement('div');
-            messageDiv.classList.add('message', sender);
-            
+            const div = document.createElement('div');
+            div.classList.add('message', sender);
             const bubble = document.createElement('div');
             bubble.classList.add('message-bubble');
-            
-            if (isLoading) {
-                 bubble.innerHTML = '<span class="loading-dots">...</span>';
-            } else {
-                 bubble.textContent = text;
-            }
-            
-            messageDiv.appendChild(bubble);
-            chatBox.appendChild(messageDiv);
+            if (isLoading) bubble.innerHTML = '<span class="loading-dots">...</span>';
+            else bubble.textContent = text;
+            div.appendChild(bubble);
+            chatBox.appendChild(div);
             chatBox.scrollTop = chatBox.scrollHeight;
-            
-            return messageDiv;
+            return div;
         }
 
         async function sendMessage() {
-            const message = chatInput.value.trim();
-            if (message === "") return;
+            const msg = chatInput.value.trim();
+            if (!msg) return;
 
-            appendMessage(message, 'user');
+            appendMessage(msg, 'user');
             chatInput.value = '';
-            
-            const loadingBubbleContainer = appendMessage("", 'model', true);
+            const loading = appendMessage("", 'model', true);
 
             try {
-                const response = await fetch('/chat', {
+                const res = await fetch('/chat', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: new URLSearchParams({
-                        message: message
-                    })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: msg })
                 });
-
-                const data = await response.json();
-                
-                chatBox.removeChild(loadingBubbleContainer);
-
-                if (data.success) {
-                    appendMessage(data.aiResponse, 'model');
-                } else {
-                    appendMessage(data.message || "Terjadi kesalahan saat menghubungi AI.", 'model');
-                }
-
-            } catch (error) {
-                console.error("Fetch/Koneksi Error:", error);
-                if (loadingBubbleContainer && chatBox.contains(loadingBubbleContainer)) {
-                    chatBox.removeChild(loadingBubbleContainer);
-                }
-                appendMessage("Koneksi terputus atau API gagal dihubungi.", 'model');
+                const data = await res.json();
+                chatBox.removeChild(loading);
+                if (data.success) appendMessage(data.aiResponse, 'model');
+            } catch (e) {
+                chatBox.removeChild(loading);
+                appendMessage("Gagal terhubung.", 'model');
             }
         }
 
-        sendButton.addEventListener('click', sendMessage);
-
-        chatInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault(); 
-                sendMessage();
+        clearBtn.addEventListener('click', async () => {
+            if (confirm('Hapus riwayat?')) {
+                await fetch('/chat/clear', { method: 'POST' });
+                chatBox.innerHTML = '';
             }
         });
 
+        sendButton.addEventListener('click', sendMessage);
+        chatInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') sendMessage(); });
     </script>
 </body>
 </html>
